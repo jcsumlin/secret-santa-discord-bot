@@ -12,3 +12,10 @@ A discord bot template that includes an example "cog" that you can use to quickl
 6) Lastly to invite your bot goto the "OAuth2" tab and select "bot" under "SCOPES" then all the relevant permissions you want your bot to have initially (don't worry this can be adjusted with roles inside your server). Copy the link that it generates and paste that in your browser.
 7) Profit???
 
+
+## TODO:
+- Add Theme to Secret Santa Events so people can buy gifts on a theme
+- Add ability to assign pairs as an organizer
+- Add note to what is sent to pairs if it exists
+
+
