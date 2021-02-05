@@ -239,7 +239,7 @@ class SecretSanta(commands.Cog):
             event = await self.event_type.get_by_id(settings.event_type_id)
             if event.address_required:
                 decoded = jwt.decode(value.address, self.key, algorithms='HS256')
-                description += f"\nPlease ship their gift to: \n`{decoded['address']}"
+                description += f"\nPlease ship their gift to: \n`{decoded['address']}`"
             if len(value.note) > 0:
                 description += f"\n\nThey left you a note which will hopefully help you pick an item:\n`{value.note}`"
             organizer = await self.bot.fetch_user(settings.organizer_id)
