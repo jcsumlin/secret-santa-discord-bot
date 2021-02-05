@@ -15,7 +15,7 @@ A discord bot template that includes an example "cog" that you can use to quickl
 
 ## TODO:
 - Add Theme to Secret Santa Events so people can buy gifts on a theme
-- Add ability to assign pairs as an organizer
-- Add note to what is sent to pairs if it exists
+- ~~Add ability to assign pairs as an organizer~~
+- ~~Add note to what is sent to pairs if it exists~~
 
 
