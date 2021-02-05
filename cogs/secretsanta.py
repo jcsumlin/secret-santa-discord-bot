@@ -213,8 +213,8 @@ class SecretSanta(commands.Cog):
         if settings is None or ctx.author.id != settings.organizer_id:
             return await ctx.send("❌ Sorry, that Secret Santa event does not exist or you are not the organizer")
         all_users = await self.secret_santa.get_all(secret_santa_id)
-        if len(all_users) % 2 != 0:
-            return await ctx.send("There are an odd number of participants. Cant assign pairs.")
+        # if len(all_users) % 2 != 0:
+        #     return await ctx.send("There are an odd number of participants. Cant assign pairs.")
 
         def pair_up(people):
             """ Given a list of people, assign each one a secret santa partner
