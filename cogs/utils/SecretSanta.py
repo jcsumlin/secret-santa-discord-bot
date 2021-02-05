@@ -27,8 +27,8 @@ class SecretSantaModel(Database):
     async def get_by_user_id(self, user_id: int):
         return self.session.query(SecretSanta).filter_by(user_id=user_id).one_or_none()
 
-    async def get_all(self, guild_id):
-        return self.session.query(SecretSanta).filter_by(guild_id=guild_id).all()
+    async def get_all(self, secret_santa_id):
+        return self.session.query(SecretSanta).filter_by(secret_santa_id=secret_santa_id).all()
 
     async def get_by_user_id_and_settings_id(self, user_id: int, settings_id: int):
         return self.session.query(SecretSanta) \

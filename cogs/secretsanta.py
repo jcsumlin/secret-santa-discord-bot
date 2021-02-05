@@ -3,7 +3,6 @@ import random
 from collections import deque
 from configparser import *
 from datetime import datetime
-from difflib import SequenceMatcher
 
 import discord
 import jwt
@@ -14,6 +13,7 @@ from .utils.SecretSanta import SecretSantaModel
 from .utils.EventType import EventTypeModel
 from .utils.SecretSantaSettings import SecretSantaSettingsModel
 from .utils.checks import mod_or_permissions
+from .utils.chat_formatting import escape
 
 
 class Draft:
@@ -38,9 +38,14 @@ class SecretSanta(commands.Cog):
     @commands.group()
     async def secretsanta(self, ctx):
         if ctx.invoked_subcommand is None:
-            embed = discord.Embed(title="That's not how you use this command",
-                                  description=f"{ctx.prefix}secretsanta new\n"
-                                              f"{ctx.prefix}secretsanta assign\n")
+            embed = discord.Embed(title="❌ That's not how you use this command",
+                                  description=f"**{ctx.prefix}secretsanta new** => Starts the flow for creating a new Secret Santa event (Requires Manage Message Permissions)\n"
+                                              f"**{ctx.prefix}secretsanta assign [id]** => Assigns pairs for the given Secret Santa event (Event Organizer Only)\n"
+                                              f"**{ctx.prefix}secretsanta address edit [id] [your new address]** => Replaces your address with a new one (encrypted)\n"
+                                              f"**{ctx.prefix}secretsanta note add [id] [note]** => Adds a note for whoever draws your name\n\n"
+                                              f"`[id]` is provided by the bot, keep an eye out for some of the tips that it will leave at the bottom of its responses.\n"
+                                              f"`Note:` the square brackets \"[]\" are placeholders you don\'t need to use them when you send commands",
+                                  color=discord.Color.green())
             await ctx.send(embed=embed)
 
     @commands.Cog.listener()
@@ -123,21 +128,22 @@ class SecretSanta(commands.Cog):
         if event_type.address_required:
             notice = "__Please DM this bot your shipping address after you've enrolled.__\n\n"
         embed = discord.Embed(
-            title=f"{ctx.guild.name}'s Secret Santa Event",
+            title=f":santa: {escape(ctx.guild.name, formatting=True)}'s Secret Santa Event",
             description=f"**Hosted By:** {ctx.author.mention}\n"
                         f"**Budget:** {secret_santa_settings['budget']}\n\n"
                         f"**Event Type:** {event_type.name}\n" +
                         notice +
-                        f"React with :santa: to enroll!")
+                        f"React with :santa: to enroll!",
+            color=discord.Color.green())
         secret_santa_settings["message"] = await secret_santa_settings["channel"].send(embed=embed)
         try:
-            await self.secret_santa_settings.add(secret_santa_settings)
+            settings = await self.secret_santa_settings.add(secret_santa_settings)
         except Exception as e:
             return await ctx.send(
                 f"Error saving your event! Please raise an issue on our github page with the following error\n\n```\n{str(e)}\n```")
         await secret_santa_settings["message"].add_reaction("🎅")
         await ctx.send(
-            f":santa: Good Job! Your Secret Santa Event has been created! You can view it {secret_santa_settings['channel'].mention}")
+            f":santa: Good Job! Your Secret Santa Event has been created! You can view it {secret_santa_settings['channel'].mention}\nTo draw pairs use this command:\n`{ctx.prefix}secretsanta assign {settings.id}`")
 
     @secretsanta.group(name="address")
     async def address(self, ctx):
@@ -183,7 +189,9 @@ class SecretSanta(commands.Cog):
         participant.address = encrypted_address
         await self.secret_santa.save()
         await ctx.send(
-            f"Perfect! Your address, **{address}**, has been encrypted and saved.\n\nIf you need to change your address DM me again with this command\n\n`!secretsanta address edit {secret_santa_settings.id} [your new address]`")
+            f"Perfect! Your address, **{address}**, has been encrypted and saved.\n\nIf you need to change your "
+            f"address DM me again with this command\n\n`!secretsanta address edit {secret_santa_settings.id} [your "
+            f"new address]`")
 
     # @secretsanta.command()
     # async def list(self, ctx):
@@ -198,9 +206,13 @@ class SecretSanta(commands.Cog):
     #                           description=f"Budget: **TBD**\nNumber of participants: {len(all_users)}\n\n {', '.join(members)}")
     #     await ctx.send(embed=embed)
 
+    @mod_or_permissions()
     @secretsanta.command()
-    async def assign(self, ctx):
-        all_users = await self.secret_santa.get_all(ctx.guild.id)
+    async def assign(self, ctx, secret_santa_id: int):
+        settings = await self.secret_santa_settings.get_by_id(secret_santa_id, ctx.guild.id)
+        if settings is None or ctx.author.id != settings.organizer_id:
+            return await ctx.send("❌ Sorry, that Secret Santa event does not exist or you are not the organizer")
+        all_users = await self.secret_santa.get_all(secret_santa_id)
         if len(all_users) % 2 != 0:
             return await ctx.send("There are an odd number of participants. Cant assign pairs.")
 
@@ -219,29 +231,24 @@ class SecretSanta(commands.Cog):
             user = await self.bot.fetch_user(key)
             if user.bot or user is None:
                 continue
-            partner = await self.bot.fetch_user(value.user_id)
-            decoded = jwt.decode(value.address, self.key, algorithms='HS256')
-            await user.send(
-                f"You have been given {partner.name}#{partner.discriminator} for secret santa. \nTheir address is {decoded['address']}")
+            assigned_user = await self.bot.fetch_user(value.user_id)
 
-    # @secretsanta.command(name="note")
-    # async def add_note(self, ctx, *, note):
-    #     user = await self.secret_santa.get_by_user_id(ctx.author.id)
-    #     if user is not None:
-    #         user.note = note
-    #         await self.secret_santa.save()
-    #         return await ctx.send("Successfully added note!")
-
-    # @secretsanta.command()
-    # async def check(self, ctx, *, address):
-    #     all_users = await self.secret_santa.get_all(ctx.guild.id)
-    #     for user in all_users:
-    #         decoded = jwt.decode(user.address, self.key, algorithms='HS256')
-    #         if SequenceMatcher(a=address, b=decoded['address']).ratio() >= 0.90:
-    #             user = await self.bot.fetch_user(user.user_id)
-    #             return await ctx.send(f"You have {user.name}")
-    #     return await ctx.send("No user found. please make sure that you copied the address I sent you earlier "
-    #                           "**exactly**")
+            value.assigned_user_id = assigned_user.id
+            await self.secret_santa.save()
+            description = f"You have pulled {escape(assigned_user.name, formatting=True)}#{assigned_user.discriminator}\nYour budget is **{settings.budget}**\n"
+            event = await self.event_type.get_by_id(settings.event_type_id)
+            if event.address_required:
+                decoded = jwt.decode(value.address, self.key, algorithms='HS256')
+                description += f"\nPlease ship their gift to: \n`{decoded['address']}"
+            if len(value.note) > 0:
+                description += f"\n\nThey left you a note which will hopefully help you pick an item:\n`{value.note}`"
+            organizer = await self.bot.fetch_user(settings.organizer_id)
+            description += f"\n\nIf you have any questions please reach out to {escape(organizer.name, formatting=True)}#{organizer.discriminator}"
+            embed = discord.Embed(
+                title=f":santa: {escape(ctx.guild.name, formatting=True)}'s Secret Santa Event Parings :santa:",
+                description=description,
+            color=discord.Color.green())
+            await user.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
@@ -268,13 +275,13 @@ class SecretSanta(commands.Cog):
                         logger.error(f'Could not enroll user in event {secret_santa_settings.id}: {e}')
                         await reaction.message.remove_reaction(reaction, user)
                         return await user.send(
-                            f"Failed to enroll you in {guild.name}'s Secret Santa Event organized by {organizer.name}. Please open an issue on our Github page with the error message: {str(e)}")
+                            f"Failed to enroll you in {escape(guild.name, formatting=True)}'s Secret Santa Event organized by {escape(organizer.name, formatting=True)}. Please open an issue on our Github page with the error message: {str(e)}")
                     try:
                         await user.send(
-                            f":santa: Ho Ho Ho! You've been enrolled in {guild.name}'s Secret Santa Event organized by {organizer.name}!")
+                            f":santa: Ho Ho Ho! You've been enrolled in {escape(guild.name, formatting=True)}'s Secret Santa Event organized by {escape(organizer.name, formatting=True)}!")
                     except discord.Forbidden:
                         m = await channel.send(
-                            f"❌ {user.mention} I could not enroll you because you have DMs disabled. Please right click this server and select Privacy Settings -> Allow direct messages from server members ")
+                            f"❌ {user.mention} I could not enroll you because you have DMs disabled. Please right click this server and select Privacy Settings => Allow direct messages from server members ")
                         await message.remove_reaction(reaction, user)
                         await m.delete(delay=10)
                     event_type = await self.event_type.get_by_id(secret_santa_settings.event_type_id)
@@ -317,14 +324,16 @@ class SecretSanta(commands.Cog):
                     except Exception as e:
                         logger.error(f'Could not un-enroll user in event {secret_santa_settings.id}: {e}')
                         return await user.send(
-                            f"Failed to un-enroll you in {guild.name}'s Secret Santa Event organized by {organizer.name}. Please open an issue on our Github page with the error message:\n\n ```{str(e)}```")
+                            f"Failed to un-enroll you in {escape(guild.name, formatting=True)}'s Secret Santa Event organized by {escape(organizer.name, formatting=True)}. Please open an issue on our Github page with the error message:\n\n ```{str(e)}```")
                     try:
                         await user.send(
-                            f":white_check_mark: You've been successfully un-enrolled in {guild.name}'s Secret Santa Event organized by {organizer.name}!")
+                            f":white_check_mark: You've been successfully un-enrolled in {escape(guild.name, formatting=True)}'s Secret Santa Event organized by {escape(organizer.name, formatting=True)}!")
                     except discord.Forbidden:
-                        m = await channel.send(f"❌ {user.mention} I could not enroll you because you have DMs disabled. Please right click this server and select Privacy Settings -> Allow direct messages from server members ")
+                        m = await channel.send(
+                            f"❌ {user.mention} I could not enroll you because you have DMs disabled. Please right click this server and select Privacy Settings => Allow direct messages from server members ")
                         await message.remove_reaction(reaction, user)
                         await m.delete(delay=10)
+
 
 def setup(bot):
     bot.add_cog(SecretSanta(bot))
