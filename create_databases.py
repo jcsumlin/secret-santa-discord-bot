@@ -1,13 +1,12 @@
 import datetime
 import os
-from configparser import ConfigParser
+
+from loguru import logger
 from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, Text, BigInteger
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
-auth = ConfigParser()
-auth.read('./auth.ini')
 
 
 class GuildSettings(Base):
@@ -33,7 +32,7 @@ class SecretSanta(Base):
 class SecretSantaSettings(Base):
     __tablename__ = "secret_santa_settings"
     id = Column(Integer, autoincrement=True, primary_key=True)
-    guild_id = Column(BigInteger, ForeignKey('guild_settings.guild_id'))
+    guild_id = Column(BigInteger)
     event_type_id = Column(Integer, ForeignKey('event_type.id'))
     channel_id = Column(BigInteger)
     message_id = Column(BigInteger)
@@ -49,16 +48,15 @@ class EventType(Base):
     address_required = Column(Boolean, default=False)
 
 
-
 if __name__ == '__main__':
     # Create an engine that stores data in the local directory's
     # sqlalchemy_example.db file.
-    HOST = auth.get('database', 'HOST')
-    USERNAME = auth.get('database', 'USERNAME')
-    PASSWORD = auth.get('database', 'PASSWORD')
-    DATABASE = auth.get('database', 'DATABASE')
-    engine = create_engine(f"postgresql+psycopg2://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}")
+    # HOST = auth.get('database', 'HOST')
+    # USERNAME = auth.get('database', 'USERNAME')
+    # PASSWORD = auth.get('database', 'PASSWORD')
+    # DATABASE = auth.get('database', 'DATABASE')
+    engine = create_engine(os.environ["DATABASE_URL"])
     # Create all tables in the engine. This is equivalent to "Create Table"
     # statements in raw SQL.
     Base.metadata.create_all(bind=engine)
-    # moves database to correct folder for bot to function
+    logger.success("Created Database Tables")

@@ -1,9 +1,8 @@
+import os
 from configparser import ConfigParser
 
 from .database import Database
 from create_databases import GuildSettings
-auth = ConfigParser()
-auth.read('./auth.ini')
 
 class GuildSettingsModel(Database):
     def __init__(self):
@@ -13,7 +12,7 @@ class GuildSettingsModel(Database):
         new = GuildSettings(
             guild_id=guild_id,
             server_name=server_name,
-            prefix=auth.get('discord', 'PREFIX'),
+            prefix=os.environ["PREFIX"],
             region=region,
             owner_id=owner_id,
             is_premium=False

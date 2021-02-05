@@ -1,7 +1,7 @@
 import asyncio
+import os
 import random
 from collections import deque
-from configparser import *
 from datetime import datetime
 
 import discord
@@ -30,9 +30,8 @@ class SecretSanta(commands.Cog):
         self.secret_santa = SecretSantaModel()
         self.secret_santa_settings = SecretSantaSettingsModel()
         self.event_type = EventTypeModel()
-        auth = ConfigParser()
-        auth.read('../auth.ini')
-        self.key = auth.get('JWTKey', 'Key')
+
+        self.key = os.environ["JWT_KEY"]
         self.drafts = []
 
     @commands.group()

@@ -44,10 +44,8 @@ intents.invites = True
 intents.voice_states = False
 intents.webhooks = False
 
-auth = ConfigParser()
-auth.read('auth.ini')
-if auth.get('discord', 'PREFIX') == "" or auth.get('discord', 'TOKEN') == "":
-    logger.error("Missing required parameters (Token and Prefix) check your auth.ini file")
+if "TOKEN" not in os.environ or "PREFIX" not in os.environ:
+    logger.error("Missing required parameters (TOKEN and PREFIX) check your environment variables")
     exit(0)
 
 
@@ -60,7 +58,7 @@ def load_cogs(folder):
     return files
 
 
-bot = commands.Bot(command_prefix=auth.get('discord', 'PREFIX'), intents=intents)
+bot = commands.Bot(command_prefix=os.environ["PREFIX"], intents=intents)
 
 
 @bot.event
@@ -140,4 +138,4 @@ if __name__ == "__main__":
         except Exception as error:
             logger.exception(f"Extension {extension} could not be loaded. [{error}]")
 
-    bot.run(auth.get('discord', 'TOKEN'))
+    bot.run(os.environ["TOKEN"])
