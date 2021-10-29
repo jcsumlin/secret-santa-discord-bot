@@ -33,8 +33,9 @@ class SecretSantaSettingsModel(Database):
     async def get_all(self):
         return self.session.query(SecretSantaSettings).all()
 
-    async def get_by_id(self, record_id: int, guild_id:int):
+    async def get_by_id(self, record_id: int):
         return self.session.query(SecretSantaSettings) \
             .filter_by(id=record_id) \
-            .filter_by(guild_id=guild_id) \
             .one_or_none()
+
+

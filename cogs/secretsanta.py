@@ -208,7 +208,7 @@ class SecretSanta(commands.Cog):
     @mod_or_permissions()
     @secretsanta.command()
     async def assign(self, ctx, secret_santa_id: int):
-        settings = await self.secret_santa_settings.get_by_id(secret_santa_id, ctx.guild.id)
+        settings = await self.secret_santa_settings.get_by_id(secret_santa_id)
         if settings is None or ctx.author.id != settings.organizer_id:
             return await ctx.send("❌ Sorry, that Secret Santa event does not exist or you are not the organizer")
         all_users = await self.secret_santa.get_all(secret_santa_id)
