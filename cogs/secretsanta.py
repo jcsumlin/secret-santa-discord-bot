@@ -260,7 +260,7 @@ class SecretSanta(commands.Cog):
         message = await channel.fetch_message(id=message_id)
 
         def check_address(m):
-            return not m.author.bot and 10 < len(m.content) < 255
+            return not m.author.bot and 10 < len(m.content) < 255 and isinstance(m.channel, discord.DMChannel) and m.author == user
 
         if not user.bot:
             secret_santa_settings = await self.secret_santa_settings.get_by_ids(guild.id, channel.id, message.id)
