@@ -36,7 +36,7 @@ class SecretSantaModel(Database):
             .filter_by(secret_santa_id=settings_id) \
             .one_or_none()
 
-    def delete(self, record: SecretSanta):
+    async def delete(self, record: SecretSanta):
         try:
             self.session.delete(record)
             self.session.commit()

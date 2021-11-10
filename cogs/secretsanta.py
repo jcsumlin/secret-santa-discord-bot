@@ -41,7 +41,8 @@ class SecretSanta(commands.Cog):
                                   description=f"**{ctx.prefix}secretsanta new** => Starts the flow for creating a new Secret Santa event (Requires Manage Message Permissions)\n"
                                               f"**{ctx.prefix}secretsanta assign [id]** => Assigns pairs for the given Secret Santa event (Event Organizer Only)\n"
                                               f"**{ctx.prefix}secretsanta address edit [id] [your new address]** => Replaces your address with a new one (encrypted)\n"
-                                              f"**{ctx.prefix}secretsanta note add [id] [note]** => Adds a note for whoever draws your name\n\n"
+                                              f"**{ctx.prefix}secretsanta note add [id] [note]** => Adds a note for whoever draws your name"
+                                              f"**{ctx.prefix}secretsanta reveal [id]** => Reveals to the event organizer who was assigned to who\n\n"
                                               f"`[id]` is provided by the bot, keep an eye out for some of the tips that it will leave at the bottom of its responses.\n"
                                               f"`Note:` the square brackets \"[]\" are placeholders you don\'t need to use them when you send commands",
                                   color=discord.Color.green())
@@ -192,18 +193,37 @@ class SecretSanta(commands.Cog):
             f"address DM me again with this command\n\n`!secretsanta address edit {secret_santa_settings.id} [your "
             f"new address]`")
 
-    # @secretsanta.command()
-    # async def list(self, ctx):
-    #     all_users = await self.secret_santa.get_all(ctx.guild.id)
-    #     members = []
-    #     for user in all_users:
-    #         user = await self.bot.fetch_user(user.user_id)
-    #         if user is not None:
-    #             members.append(user.mention)
-    #
-    #     embed = discord.Embed(title=f"{ctx.guild.name} Secret Santa Participants",
-    #                           description=f"Budget: **TBD**\nNumber of participants: {len(all_users)}\n\n {', '.join(members)}")
-    #     await ctx.send(embed=embed)
+    @secretsanta.command()
+    async def reveal(self, ctx, secret_santa_id: int):
+        if ctx.message.channel.type.name != "private":
+            return await ctx.send("This command can only be used in DMs please DM the bot.")
+        settings = await self.secret_santa_settings.get_by_id(secret_santa_id)
+        if settings is None or ctx.author.id != settings.organizer_id:
+            return await ctx.send("❌ Sorry, that Secret Santa event does not exist or you are not the organizer")
+        all_users = await self.secret_santa.get_all(secret_santa_id)
+        organizer = await self.bot.fetch_user(settings.organizer_id)
+        event_type = await self.event_type.get_by_id(settings.event_type_id)
+        embed = discord.Embed(
+            title=f"{escape(organizer.name, formatting=True)}#{organizer.discriminator}'s Secret Santa Event Status",
+            description=f"**Budget**: {settings.budget}\n"
+                        f"**Enrollment Message**: [Here](https://discord.com/channels/{settings.guild_id}/{settings.channel_id}/{settings.message_id})\n"
+                        f"**Event Type**: {event_type.name}\n"
+                        f"__**Participants**__:",
+            color=discord.Color.green()
+        )
+        for user in all_users:
+            discord_user = await self.bot.fetch_user(user.user_id)
+            if user.assigned_user_id != 0:
+                assigned_user = await self.bot.fetch_user(user.assigned_user_id)
+                assigned_user = f"{escape(assigned_user.name, formatting=True)}#{assigned_user.discriminator}"
+            else:
+                assigned_user = "No Assigned User"
+            embed.add_field(
+                name=f"{escape(discord_user.name, formatting=True)}#{discord_user.discriminator}",
+                value=f"**Drew**: {assigned_user}",
+                inline=False
+            )
+        await ctx.send(embed=embed)
 
     @mod_or_permissions()
     @secretsanta.command()
@@ -246,7 +266,7 @@ class SecretSanta(commands.Cog):
             embed = discord.Embed(
                 title=f":santa: {escape(ctx.guild.name, formatting=True)}'s Secret Santa Event Parings :santa:",
                 description=description,
-            color=discord.Color.green())
+                color=discord.Color.green())
             await user.send(embed=embed)
 
     @commands.Cog.listener()
@@ -255,6 +275,8 @@ class SecretSanta(commands.Cog):
         message_id = payload.message_id
         guild_id = payload.guild_id
         guild = discord.utils.find(lambda g: g.id == guild_id, self.bot.guilds)
+        if guild is None:
+            return
         user = await guild.fetch_member(payload.user_id)
         channel = discord.utils.get(guild.channels, id=payload.channel_id)
         message = await channel.fetch_message(id=message_id)
@@ -308,6 +330,8 @@ class SecretSanta(commands.Cog):
         message_id = payload.message_id
         guild_id = payload.guild_id
         guild = discord.utils.find(lambda g: g.id == guild_id, self.bot.guilds)
+        if guild is None:
+            return
         user = await guild.fetch_member(payload.user_id)
         channel = discord.utils.get(guild.channels, id=payload.channel_id)
         message = await channel.fetch_message(id=message_id)
@@ -323,7 +347,7 @@ class SecretSanta(commands.Cog):
                     try:
                         participant = await self.secret_santa.get_by_user_id_and_settings_id(user.id,
                                                                                              secret_santa_settings.id)
-                        self.secret_santa.delete(participant)
+                        await self.secret_santa.delete(participant)
                     except Exception as e:
                         logger.error(f'Could not un-enroll user in event {secret_santa_settings.id}: {e}')
                         return await user.send(

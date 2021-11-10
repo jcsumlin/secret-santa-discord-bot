@@ -120,12 +120,20 @@ async def unload(ctx, extension):
 @bot.event
 async def on_command_completion(ctx):
     fullCommandName = ctx.command.qualified_name
-    split = fullCommandName.split(" ")
     guild_name = "DMs"
     if ctx.guild is not None:
         guild_name = ctx.guild.name
     logger.debug(
         f"Executed '{fullCommandName}' command in {guild_name} by {ctx.message.author} (ID: {ctx.message.author.id})")
+
+
+if "SENTRY_URL" in os.environ:
+    logger.debug("Initializing Sentry error logging")
+    from discord_sentry_reporting import use_sentry
+
+    use_sentry(bot, dsn=os.environ["SENTRY_URL"])
+
+
 
 if __name__ == "__main__":
     extensions = load_cogs('cogs')
