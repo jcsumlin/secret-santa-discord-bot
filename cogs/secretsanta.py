@@ -264,6 +264,8 @@ class SecretSanta(commands.Cog):
 
         if not user.bot:
             secret_santa_settings = await self.secret_santa_settings.get_by_ids(guild.id, channel.id, message.id)
+            if secret_santa_settings is None:
+                return
             organizer = await guild.fetch_member(secret_santa_settings.organizer_id)
 
             if secret_santa_settings is not None:
@@ -312,6 +314,8 @@ class SecretSanta(commands.Cog):
 
         if not user.bot:
             secret_santa_settings = await self.secret_santa_settings.get_by_ids(guild.id, channel.id, message.id)
+            if secret_santa_settings is None:
+                return
             organizer = await guild.fetch_member(secret_santa_settings.organizer_id)
 
             if secret_santa_settings is not None:

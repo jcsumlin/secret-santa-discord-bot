@@ -121,13 +121,11 @@ async def unload(ctx, extension):
 async def on_command_completion(ctx):
     fullCommandName = ctx.command.qualified_name
     split = fullCommandName.split(" ")
-    executedCommand = str(split[0])
     guild_name = "DMs"
     if ctx.guild is not None:
         guild_name = ctx.guild.name
     logger.debug(
-        f"Executed {executedCommand} command in {guild_name} by {ctx.message.author} (ID: {ctx.message.author.id})")
-
+        f"Executed '{fullCommandName}' command in {guild_name} by {ctx.message.author} (ID: {ctx.message.author.id})")
 
 if __name__ == "__main__":
     extensions = load_cogs('cogs')
